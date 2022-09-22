@@ -1,0 +1,7 @@
+Notes: 
+Initial flow rate was at 15 psi for the first 8 runs. Following, the experiments were run at 5 psi. No discernible difference in the shape of the curves.
+
+Final Volumes:
+Water - 12 mL
+Ethanol - 11.8 mL
+IPA - 11.9 mL
