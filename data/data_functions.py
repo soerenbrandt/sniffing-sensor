@@ -5,19 +5,23 @@ This file contains all the functions used in my python scripts for HANDLING OF D
 """
 
 from abc import ABC, abstractmethod
+import logging
 from pathlib import Path
+import time
 
 import numpy as np
 import pandas as pd
 from PIL import Image
 import scipy.signal
 
+DATA_PATH = Path(__file__).parent.joinpath('fra_exp_csv')
+
 
 class DataLoader:
     def __init__(self,
                  dataset: dict,
                  transforms: list = None,
-                 folder: str = './data/fra_exp_csv'):
+                 folder: str = DATA_PATH):
         self.folder = Path(folder)
         self.data = dataset
         self.transforms = transforms or []
@@ -35,7 +39,13 @@ class DataLoader:
             for b, experiment in enumerate(exp_ids):
                 loadbar.update(b)
 
-                data = pd.read_csv(self.folder.joinpath(f"{num:06d}.csv"))
+                try:
+                    data = pd.read_csv(
+                        self.folder.joinpath(f"{experiment:06d}.csv"))
+                except FileNotFoundError as e:
+                    logging.warning(str(e))
+                    continue
+
                 for t in self.transforms:
                     data = t.transform(data)
 
@@ -68,15 +78,15 @@ class Transform(ABC):
 
     @staticmethod
     @abstractmethod
-    def transform(raw_data) -> np.array:
+    def transform(data) -> np.array:
         pass
 
 
 class DerivTransform(Transform):
     @staticmethod
-    def transform(raw_data) -> np.array:
-        data_spectra = (raw_data.values[:, 1:] -
-                        np.min(raw_data.values[:, 1:])).transpose()
+    def transform(data) -> np.array:
+        data_spectra = (data.values[:, 1:] -
+                        np.min(data.values[:, 1:])).transpose()
 
         # performing manually: phase_derivs = [da.getPhaseDerivative('spectral',1,smoothing=True,normalize=False) for da in datas]
         # Step 1: get phase derivative data at each time step
@@ -109,9 +119,8 @@ class ImageTransform(Transform):
         super().__init__()
         self.size = size
 
-    def transform(self, raw_data) -> np.array:
-        data_im = (raw_data.values[:, 1:] -
-                   np.min(raw_data.values[:, 1:])).transpose()
+    def transform(self, data) -> np.array:
+        data_im = (data.values[:, 1:] - np.min(data.values[:, 1:])).transpose()
         data_im = data_im * 255 / np.max(data_im)
 
         img = Image.fromarray(data_im)
@@ -130,231 +139,229 @@ class NormalizeTransform(Transform):
 class SleepTransform(Transform):
     @staticmethod
     def transform(data):
-        sleep(0.5)
+        del data
+        time.sleep(0.5)
 
 
 #------------------------------------------------------------#
-# Load datasets
+# Old functions to load data using fra_expt (requires python 2.7)
 #------------------------------------------------------------#
 # import our modules
-import fra_expt
+#import fra_expt
 
-import time
-import sys
-import warnings
-from collections import OrderedDict
+# import time
+# import sys
+# import warnings
+# from collections import OrderedDict
 
+# def load_labeled_set(exp_set):  # originally load_exps
+#     #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
+#     exp_derivs = {}
+#     exp_num_name = {}
 
-def load_labeled_set(exp_set):  # originally load_exps
-    #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
-    exp_derivs = {}
-    exp_num_name = {}
+#     # create report if chem labels don't match
+#     report = ""
 
-    # create report if chem labels don't match
-    report = ""
+#     # start toolbar
+#     sys.stdout.write("Loading experimental data \n")
+#     sys.stdout.flush()
+#     loaded = 0
 
-    # start toolbar
-    sys.stdout.write("Loading experimental data \n")
-    sys.stdout.flush()
-    loaded = 0
+#     for count, chem in enumerate(exp_set):
+#         nums = exp_set[chem]
 
-    for count, chem in enumerate(exp_set):
-        nums = exp_set[chem]
+#         t = time.time()  # start timer
+#         #loads experiments then smoothes and normalizes data
+#         with warnings.catch_warnings():
+#             warnings.simplefilter("ignore")
+#             exps = []  #[fra_expt.get_expt(n) for n in nums]
+#             for b, n in enumerate(nums):
+#                 exp = fra_expt.get_expt(n)
+#                 exps.append(exp)
 
-        t = time.time()  # start timer
-        #loads experiments then smoothes and normalizes data
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            exps = []  #[fra_expt.get_expt(n) for n in nums]
-            for b, n in enumerate(nums):
-                exp = fra_expt.get_expt(n)
-                exps.append(exp)
+#                 # check if chemical is actually labeled correctly
+#                 if sum([
+#                         exp.sample_composition[string] == 1
+#                         for n, string in enumerate(exp.sample_composition.keys(
+#                         )) if string.lower() == chem.lower()
+#                 ]) != 1:
+#                     report = report + "\nExp. " + str(
+#                         n
+#                     ) + " does not match. Labeled " + chem + " but lists " + str(
+#                         [
+#                             key + ": " + str(value)
+#                             for key, value in exp.sample_composition.items()
+#                         ])
 
-                # check if chemical is actually labeled correctly
-                if sum([
-                        exp.sample_composition[string] == 1
-                        for n, string in enumerate(exp.sample_composition.keys(
-                        )) if string.lower() == chem.lower()
-                ]) != 1:
-                    report = report + "\nExp. " + str(
-                        n
-                    ) + " does not match. Labeled " + chem + " but lists " + str(
-                        [
-                            key + ": " + str(value)
-                            for key, value in exp.sample_composition.items()
-                        ])
+#                 # update the bar
+#                 sys.stdout.write('\r')
+#                 bar = ((b + 1) * 100) / len(nums)
+#                 # the exact output you're looking for:
+#                 sys.stdout.write(
+#                     str(chem) + ": [%-20s] %d%%" %
+#                     ('=' * (bar / 5 - 1) + str(bar % 10), bar))
+#                 sys.stdout.flush()
+#                 loaded += 1
 
-                # update the bar
-                sys.stdout.write('\r')
-                bar = ((b + 1) * 100) / len(nums)
-                # the exact output you're looking for:
-                sys.stdout.write(
-                    str(chem) + ": [%-20s] %d%%" %
-                    ('=' * (bar / 5 - 1) + str(bar % 10), bar))
-                sys.stdout.flush()
-                loaded += 1
+#         t1 = int(time.time() - t)  # time loading
+#         sys.stdout.write(" " + str(t1 / 60) + ":" + "%02.d" % (t1 % 60) +
+#                          "min loading")
+#         sys.stdout.flush()
 
-        t1 = int(time.time() - t)  # time loading
-        sys.stdout.write(" " + str(t1 / 60) + ":" + "%02.d" % (t1 % 60) +
-                         "min loading")
-        sys.stdout.flush()
+#         datas = [exp.main_spec_data.set_times(600) for exp in exps]
+#         datas = [da.lower_data_freq(1) for da in datas
+#                  ]  #necessary because some experiments sampled at 4 Hz or 1 Hz
+#         #    freqs = [da.get_data_frequency() for da in datas]
+#         #    print freqs
 
-        datas = [exp.main_spec_data.set_times(600) for exp in exps]
-        datas = [da.lower_data_freq(1) for da in datas
-                 ]  #necessary because some experiments sampled at 4 Hz or 1 Hz
-        #    freqs = [da.get_data_frequency() for da in datas]
-        #    print freqs
+#         #calculate the phase derivative, UNNORMALIZED TO SHOW BAD LINEAR PCA WEAKNESSES
+#         phase_derivs = [
+#             da.getPhaseDerivative('spectral',
+#                                   1,
+#                                   smoothing=True,
+#                                   normalize=False) for da in datas
+#         ]
+#         phase_derivs = [deriv for deriv in phase_derivs]
 
-        #calculate the phase derivative, UNNORMALIZED TO SHOW BAD LINEAR PCA WEAKNESSES
-        phase_derivs = [
-            da.getPhaseDerivative('spectral',
-                                  1,
-                                  smoothing=True,
-                                  normalize=False) for da in datas
-        ]
-        phase_derivs = [deriv for deriv in phase_derivs]
+#         #saves the derivs in the dictionary
+#         for n, num in enumerate(nums):
+#             if np.size(phase_derivs[n]) < 600:
+#                 phase_derivs[n] = np.append(phase_derivs[n], [0])
+#             exp_derivs[num] = phase_derivs[n]
+#             exp_num_name[num] = chem
 
-        #saves the derivs in the dictionary
-        for n, num in enumerate(nums):
-            if np.size(phase_derivs[n]) < 600:
-                phase_derivs[n] = np.append(phase_derivs[n], [0])
-            exp_derivs[num] = phase_derivs[n]
-            exp_num_name[num] = chem
+#         t2 = int(time.time() - t) - t1  # time derivatives
+#         sys.stdout.write("  " + str(t2 / 60) + ":" + "%02.d" % (t2 % 60) +
+#                          "min derivatives")
+#         sys.stdout.flush()
 
-        t2 = int(time.time() - t) - t1  # time derivatives
-        sys.stdout.write("  " + str(t2 / 60) + ":" + "%02.d" % (t2 % 60) +
-                         "min derivatives")
-        sys.stdout.flush()
+#         # update the bar
+#         sys.stdout.write("   " + str(count + 1) + "/" + str(len(exp_set)) +
+#                          " complete\n")
+#         sys.stdout.flush()
 
-        # update the bar
-        sys.stdout.write("   " + str(count + 1) + "/" + str(len(exp_set)) +
-                         " complete\n")
-        sys.stdout.flush()
+#     exp_set_size = len(np.concatenate(exp_set.values(), axis=None))
+#     print("Length of experimental set loaded: " + str(exp_set_size))
 
-    exp_set_size = len(np.concatenate(exp_set.values(), axis=None))
-    print("Length of experimental set loaded: " + str(exp_set_size))
+#     return (exp_derivs, exp_num_name, exp_set_size)
 
-    return (exp_derivs, exp_num_name, exp_set_size)
+# def load_unlabeled_set(exp_set):
+#     # setup dictionary to hold datasets
+#     dataset = OrderedDict()
 
+#     # start toolbar
+#     sys.stdout.write("Loading experimental data \n")
+#     sys.stdout.flush()
+#     loaded = 0
 
-def load_unlabeled_set(exp_set):
-    # setup dictionary to hold datasets
-    dataset = OrderedDict()
+#     for name, nums in exp_set.items:
+#         #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
+#         exp_derivs = {}
+#         exp_concentrations = {}
 
-    # start toolbar
-    sys.stdout.write("Loading experimental data \n")
-    sys.stdout.flush()
-    loaded = 0
+#         for num in nums:  #enumerate(nums):
+#             t = time.time()  # start timer
+#             #loads experiment then smoothes and normalizes data
+#             with warnings.catch_warnings():
+#                 warnings.simplefilter("ignore")
+#                 exp = fra_expt.get_expt(num)
 
-    for name, nums in exp_set.items:
-        #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
-        exp_derivs = {}
-        exp_concentrations = {}
+#             data = exp.main_spec_data.set_times(
+#                 600)  # might have to set to 500 for regression
+#             data = data.lower_data_freq(1)
 
-        for num in nums:  #enumerate(nums):
-            t = time.time()  # start timer
-            #loads experiment then smoothes and normalizes data
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                exp = fra_expt.get_expt(num)
+#             #calculate the phase derivative
+#             phase_deriv = data.getPhaseDerivative('spectral',
+#                                                   1,
+#                                                   smoothing=True,
+#                                                   normalize=False)
+#             exp_derivs[num] = phase_deriv / np.sqrt(np.sum(phase_deriv**
+#                                                            2))  # normalize
 
-            data = exp.main_spec_data.set_times(
-                600)  # might have to set to 500 for regression
-            data = data.lower_data_freq(1)
+#             #get concentration
+#             exp_concs[num] = exp.sample_composition
 
-            #calculate the phase derivative
-            phase_deriv = data.getPhaseDerivative('spectral',
-                                                  1,
-                                                  smoothing=True,
-                                                  normalize=False)
-            exp_derivs[num] = phase_deriv / np.sqrt(np.sum(phase_deriv**
-                                                           2))  # normalize
+#             # update the bar
+#             sys.stdout.write('\r')
+#             bar = ((count + 1) * 100) / len(exp_set)
+#             # the exact output you're looking for:
+#             sys.stdout.write("[%-20s] %d%%" %
+#                              ('=' * (bar / 5 - 1) + str(bar % 10), bar))
+#             sys.stdout.flush()
+#             loaded += 1
 
-            #get concentration
-            exp_concs[num] = exp.sample_composition
+#         # clean up concentrations dictionary
+#         keys = set(
+#             [key for composition in exp_concentrations for key in composition])
+#         exp_concs = {}
+#         for num in nums:
+#             exp_concs[num] = {}
+#             for chem in keys:
+#                 try:
+#                     exp_concs[num][chem.capitalize()] = A[num][chem]
+#                 except:
+#                     exp_concs[num][chem.capitalize()] = 0
 
-            # update the bar
-            sys.stdout.write('\r')
-            bar = ((count + 1) * 100) / len(exp_set)
-            # the exact output you're looking for:
-            sys.stdout.write("[%-20s] %d%%" %
-                             ('=' * (bar / 5 - 1) + str(bar % 10), bar))
-            sys.stdout.flush()
-            loaded += 1
+#         # add dictionaries to dataset
+#         dataset[name] = [exp_derivs, exp_concs]
 
-        # clean up concentrations dictionary
-        keys = set(
-            [key for composition in exp_concentrations for key in composition])
-        exp_concs = {}
-        for num in nums:
-            exp_concs[num] = {}
-            for chem in keys:
-                try:
-                    exp_concs[num][chem.capitalize()] = A[num][chem]
-                except:
-                    exp_concs[num][chem.capitalize()] = 0
+#         # update the bar
+#         sys.stdout.write("   " + " complete\n")
+#         sys.stdout.flush()
 
-        # add dictionaries to dataset
-        dataset[name] = [exp_derivs, exp_concs]
+#     exp_set_size = count + 1
+#     print(
+#         str(exp_set_size) + " experiments loaded in " + len(exp_set) +
+#         " datasets.")
 
-        # update the bar
-        sys.stdout.write("   " + " complete\n")
-        sys.stdout.flush()
+#     return (exp_derivs, exp_concentrations, exp_set_size)
 
-    exp_set_size = count + 1
-    print(
-        str(exp_set_size) + " experiments loaded in " + len(exp_set) +
-        " datasets.")
+# def load_unlabeled_list(exp_set, chem):  # previously load_list
+#     #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
+#     exp_derivs = {}
+#     exp_concentrations = {}
 
-    return (exp_derivs, exp_concentrations, exp_set_size)
+#     # start toolbar
+#     sys.stdout.write("Loading experimental data \n")
+#     sys.stdout.flush()
+#     loaded = 0
 
+#     for count, num in enumerate(exp_set):
+#         t = time.time()  # start timer
+#         #loads experiment then smoothes and normalizes data
+#         with warnings.catch_warnings():
+#             warnings.simplefilter("ignore")
+#             exp = fra_expt.get_expt(num)
 
-def load_unlabeled_list(exp_set, chem):  # previously load_list
-    #sets up dictionaries to hold the derivs for different compounds and corresponding number/chemical
-    exp_derivs = {}
-    exp_concentrations = {}
+#         data = exp.main_spec_data.set_times(
+#             600)  # might have to set to 500 for regression
+#         data = data.lower_data_freq(1)
 
-    # start toolbar
-    sys.stdout.write("Loading experimental data \n")
-    sys.stdout.flush()
-    loaded = 0
+#         #calculate the phase derivative
+#         phase_deriv = data.getPhaseDerivative('spectral',
+#                                               1,
+#                                               smoothing=True,
+#                                               normalize=False)
+#         exp_derivs[num] = phase_deriv / np.sqrt(np.sum(phase_deriv**
+#                                                        2))  # normalize
 
-    for count, num in enumerate(exp_set):
-        t = time.time()  # start timer
-        #loads experiment then smoothes and normalizes data
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            exp = fra_expt.get_expt(num)
+#         #get concentration
+#         exp_concentrations[num] = exp.sample_composition[chem]
 
-        data = exp.main_spec_data.set_times(
-            600)  # might have to set to 500 for regression
-        data = data.lower_data_freq(1)
+#         # update the bar
+#         sys.stdout.write('\r')
+#         bar = ((count + 1) * 100) / len(exp_set)
+#         # the exact output you're looking for:
+#         sys.stdout.write("[%-20s] %d%%" % ('=' *
+#                                            (bar / 5 - 1) + str(bar % 10), bar))
+#         sys.stdout.flush()
+#         loaded += 1
 
-        #calculate the phase derivative
-        phase_deriv = data.getPhaseDerivative('spectral',
-                                              1,
-                                              smoothing=True,
-                                              normalize=False)
-        exp_derivs[num] = phase_deriv / np.sqrt(np.sum(phase_deriv**
-                                                       2))  # normalize
+#     # update the bar
+#     sys.stdout.write("   " + " complete\n")
+#     sys.stdout.flush()
 
-        #get concentration
-        exp_concentrations[num] = exp.sample_composition[chem]
+#     exp_set_size = count + 1
+#     print("Length of experimental set loaded: " + str(exp_set_size))
 
-        # update the bar
-        sys.stdout.write('\r')
-        bar = ((count + 1) * 100) / len(exp_set)
-        # the exact output you're looking for:
-        sys.stdout.write("[%-20s] %d%%" % ('=' *
-                                           (bar / 5 - 1) + str(bar % 10), bar))
-        sys.stdout.flush()
-        loaded += 1
-
-    # update the bar
-    sys.stdout.write("   " + " complete\n")
-    sys.stdout.flush()
-
-    exp_set_size = count + 1
-    print("Length of experimental set loaded: " + str(exp_set_size))
-
-    return (exp_derivs, exp_concentrations, exp_set_size)
+#     return (exp_derivs, exp_concentrations, exp_set_size)

@@ -14,6 +14,7 @@ import pandas as pd
 import sqlite3
 
 from .experiment_parameters import ExperimentFilter, DataFilter
+from .experiment_parameters import ANALYTES_DB, LIBRARY_DB
 
 COLOR_DICT = OrderedDict([
     ('Pentane', (69. / 255, 127. / 255, 181. / 255)),  # blue
@@ -43,7 +44,7 @@ class Dataset(OrderedDict):
             self.filter(filters)
 
     def filter(self, filters: Union[ExperimentFilter, DataFilter, List]):
-        if not hasattr(filter, '__iter__'): filters = [filters]
+        if not hasattr(filters, '__iter__'): filters = [filters]
         for filter_ in filters:
             for chem, experiment_ids in self.items():
                 self.__setitem__(chem, filter_(experiment_ids))
@@ -241,8 +242,8 @@ def _all_compounds(existing_CSV=True, **kwargs):
     Example: exp_set = all_data(in_ = tall_Cuvettes(), with_ = SM30_Sensors(), and_ = injection_Rate(6.0))
     """
     # connect to experiment libraries
-    conn = sqlite3.connect("Library copy")
-    conn2 = sqlite3.connect("Analytes.db")
+    conn = sqlite3.connect(LIBRARY_DB)
+    conn2 = sqlite3.connect(ANALYTES_DB)
 
     # create label dictionary
     label_dict = {}
@@ -307,7 +308,7 @@ def _all_compounds(existing_CSV=True, **kwargs):
 
 def _pure_compounds(chem_list=None, **kwargs):
     """
-    pure_compounds imports all experiment IDs from Library copy that fit the parameters in kwargs:
+    pure_compounds imports all experiment IDs from Library that fit the parameters in kwargs:
 
     kwargs include:
         in_ : short_Cuvettes, medium_Cuvettes, tall_Cuvettes, other_Cuvettes
@@ -316,7 +317,7 @@ def _pure_compounds(chem_list=None, **kwargs):
     Example: exp_set = pure_compounds('Pentane', in_ = tall_Cuvettes(), with_ = SM30_Sensors(), and_ = injection_Rate(6.0))
     """
     # connect to experiment library
-    conn = sqlite3.connect("Library copy")
+    conn = sqlite3.connect(LIBRARY_DB)
 
     # update chem_list with IDs
     if chem_list == None:  # get all chemicals in dataset
@@ -348,7 +349,7 @@ def _pure_compounds(chem_list=None, **kwargs):
 
 def _binary_mixtures(chem_list=None, **kwargs):
     """
-    binary_mixtures imports all experiment IDs from Library copy that contain the chemicals in chem_list and fit the parameters in kwargs:
+    binary_mixtures imports all experiment IDs from Library that contain the chemicals in chem_list and fit the parameters in kwargs:
 
     kwargs include:
         in_ : short_Cuvettes, medium_Cuvettes, tall_Cuvettes, other_Cuvettes
@@ -357,8 +358,7 @@ def _binary_mixtures(chem_list=None, **kwargs):
     Example: exp_set = binary_mixtures(['Pentane', 'Hexane'], in_ = tall_Cuvettes(), with_ = SM30_Sensors(), and_ = injection_Rate(6.0))
     """
     # connect to experiment library
-    conn = sqlite3.connect("Library copy")
-    conn2 = sqlite3.connect("Analytes.db")
+    conn2 = sqlite3.connect(ANALYTES_DB)
 
     # check that chem list contains mixture
     if len(chem_list) != 2:  # abort
@@ -403,8 +403,6 @@ def _binary_mixtures(chem_list=None, **kwargs):
     sorted_df = sorted_df.reset_index()
 
     # make exp_set
-    from collections import OrderedDict
-
     exp_set = OrderedDict()
 
     for n, analyte in enumerate(list(sorted_df["Analyte ID"])):
@@ -436,21 +434,21 @@ def _binary_mixtures(chem_list=None, **kwargs):
 
 
 class AllCompounds(Dataset):
-    def __init__(self):
-        exp_set = _all_compounds()
-        super().__init__(exp_set)
+    def __init__(self, existing_CSV=True, **kwargs):
+        exp_set = _all_compounds(existing_CSV)
+        super().__init__(exp_set, **kwargs)
 
 
 class PureCompounds(Dataset):
-    def __init__(self):
-        exp_set = _pure_compounds()
-        super().__init__(exp_set)
+    def __init__(self, chem_list=None, **kwargs):
+        exp_set = _pure_compounds(chem_list)
+        super().__init__(exp_set, **kwargs)
 
 
 class BinaryMixtures(Dataset):
-    def __init__(self):
-        exp_set = _binary_mixtures()
-        super().__init__(exp_set)
+    def __init__(self, chem_list=None, **kwargs):
+        exp_set = _binary_mixtures(chem_list)
+        super().__init__(exp_set, **kwargs)
 
 
 #------------------------------------------------------------#
@@ -558,8 +556,8 @@ class AllPentaneHexane(Dataset):
              [602, 603] + [605, 606] + [607, 608, 609] + [610, 611, 629] +
              [612, 613, 614] + [615, 616, 617] + [618, 619, 620] + [623]
              ),  # 606, 621, 622 # 629-2.0s injection # range(592,623) + [629])
-            ('C5C6 2', range(46, 55) + range(55, 105)),
-            ('C5C6 3', range(211, 216) + [232, 234]),  # 233
+            ('C5C6 2', list(range(46, 55)) + list(range(55, 105))),
+            ('C5C6 3', list(range(211, 216)) + [232, 234]),  # 233
             ('C5C6 4', [259, 260])
         ])
         super().__init__(exp_set)

@@ -1,0 +1,12 @@
+## System extensions
+**/.*
+**/__*
+
+## Files
+**/Analytes.db
+**/Library*
+Untitled.ipynb
+
+## Data
+data/fra_exp*
+data/sniffing_data*
