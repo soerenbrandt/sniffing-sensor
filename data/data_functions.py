@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import scipy.signal
 from PIL import Image
+from scipy.interpolate import interp1d
 
 DATA_PATH = Path(__file__).parent.joinpath("fra_exp_csv")
 SNIFFING_PATH = Path(__file__).parent.joinpath("sniffing_data")
@@ -149,6 +150,37 @@ class ImageTransform(Transform):
         img_resized = img.resize(self.size)
 
         return np.array(img_resized)
+
+
+class StaticShiftTransform(Transform):
+    def __init__(self, normalize=False):
+        """Convert raw data to image format.
+
+        Args:
+            size (tuple[int, int]): Image dimensions. Defaults to (299, 299) for Inception modeul.
+        """
+        super().__init__()
+        self.normalize = normalize
+
+    def transform(self, data) -> np.array:
+        data_spectra = (
+            data.values[:, 1:] - np.min(data.values[:, 1:])
+        ).transpose()
+        wavelengths = (data.values[:, :1]).transpose()[0]
+
+        # Step 1: get shift between first and last spectrum
+        reflectance_shift = data_spectra[0] - data_spectra[-1]
+        if self.normalize:
+            reflectance_shift /= max(data_spectra[-1])
+        # Step 2: Smooth data #moved latee: and normalize the spectrum
+        reflectance_shift = scipy.signal.savgol_filter(
+            reflectance_shift, window_length=31, polyorder=2
+        )
+        # Reflectance_shift = Reflectance_shift/np.sqrt(np.sum(Reflectance_shift**2)) #moved to later
+        # Step 3: Interpolate spectrum to 600-dimensional array
+        reflectance_shift_interp = interp1d(wavelengths, reflectance_shift)
+
+        return reflectance_shift_interp(np.linspace(401, 799, 600))
 
 
 class NormalizeTransform(Transform):
