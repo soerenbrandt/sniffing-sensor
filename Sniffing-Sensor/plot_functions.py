@@ -4,15 +4,16 @@ Creadted Mar 8 2019 by Soeren Brandt
 This file contains all the functions used in my python scripts for VISUALIZATION of machine learning results
 """
 
+import matplotlib.pyplot as plt
+
 #import some generally useful modules
 import numpy as np
-import matplotlib.pyplot as plt
+import seaborn as sns
 
 #------------------------------------------------------------#
 # Define color sets
 #------------------------------------------------------------#
 
-import seaborn as sns
 
 def get_colors(n, palette = 'bright'):
     # gives you a color range
@@ -27,15 +28,16 @@ def get_markers(n = None):
         return markers
     else:
         return markers[0:n]
-    
+
 def get_contour_order(dataset):
     order = {}
     for count, key in enumerate(dataset.keys()):
         order[key] = count
-    
+
     return order
 
 from colour import Color
+
 
 def get_gradient_colors(n, start, end):
     # gives you a color range between start and end
@@ -43,12 +45,12 @@ def get_gradient_colors(n, start, end):
         firstColor = Color(start)
     elif type(start) == tuple:
         firstColor = Color(rgb=start)
-        
+
     if type(end) == str:
         finalColor = Color(end)
     elif type(end) == tuple:
         finalColor = Color(rgb=end)
-        
+
     colors = list(firstColor.range_to(finalColor,n))
     colors = [color.rgb for color in colors]
 
@@ -64,7 +66,7 @@ def plot_data(x,y, marker = 'o', face = [0, 0, 0, 1], edge = [0, 0, 0, 1], name 
         #initialize figure and set size
         fig, ax = plt.subplots()
         fig.set_size_inches(6,6)
-        
+
     ax.scatter(x,y,marker = marker,c=face,edgecolors=edge,s=20,label=name)
     return
 
@@ -77,11 +79,11 @@ def create_plot(bounds):
         plot_y_min = np.min(bounds[:, 1]) - 0.1*abs(np.min(bounds[:, 1]))
         plot_y_max = np.max(bounds[:, 1]) + 0.1*abs(np.max(bounds[:, 1]))
         bounds = [plot_x_min, plot_x_max, plot_y_min, plot_y_max]
-    
+
     #initialize figure and set size
     fig, ax = plt.subplots()
     fig.set_size_inches(6,6)
-    
+
     #all the nice plotting things
     plt.xlabel("PC 1")
     plt.ylabel("PC 2")
@@ -95,7 +97,7 @@ def create_plot(bounds):
 
     #shows legend
     plt.legend()
-    
+
     return (fig, ax)
 
 
@@ -115,7 +117,7 @@ def create_scatter_plot(exp_set,set_key,plot_PCA,face = [0, 0, 0, 1],edge = [0, 
         fig, ax = create_plot([plot_x_min, plot_x_max, plot_y_min, plot_y_max])
     else:
         fig = ax.figure
-        
+
     # list whole dataset
     #wholeset = list(np.sort(np.concatenate(exp_set.values(),axis=None)))
 
@@ -141,13 +143,13 @@ def plot_prediction(exp_set,plot_PCA,SVC,PCA_transform=None,grid_size = 200,face
     plot_x_max = np.max(plot_PCA[:, 0]) + 0.75*abs(np.max(plot_PCA[:, 0]))
     plot_y_min = np.min(plot_PCA[:, 1]) - 0.1*abs(np.min(plot_PCA[:, 1]))
     plot_y_max = np.max(plot_PCA[:, 1]) + 0.1*abs(np.max(plot_PCA[:, 1]))
-    
+
     if ax == None:
         # create plot with bounds from PCA
         fig, ax = create_plot([plot_x_min, plot_x_max, plot_y_min, plot_y_max])
     else:
         fig = ax.figure
-    
+
     ## PLOT PREDICTION REGIONS
     # create grid to draw prediction boundaries
     plot_x_range = np.linspace(plot_x_min,plot_x_max,grid_size)
@@ -177,20 +179,20 @@ def plot_prediction(exp_set,plot_PCA,SVC,PCA_transform=None,grid_size = 200,face
     for chem in SVC_predictions:
         contour.append(cont_dict[chem])
     contour = np.array(contour).reshape(X.shape)
-    
+
     # plot regions of predictions
     cont_order.append(-1)
     plt.contourf(plot_x_range,plot_y_range,contour,np.sort(cont_order),colors=colors) #['r','g','b','k']) #
-    
+
     # add contours
     if line != None:
         C_x = scipy.signal.convolve2d(contour,np.array([[1,0],[0,-1]]))
         C_y = scipy.signal.convolve2d(contour,np.array([[0,1],[-1,0]]))
         C = C_x**2 + C_y**2
         C = np.logical_not(C>0)
-        
+
         plt.contour(plot_x_range[:-1],plot_y_range[:-1],C[1:-1,1:-1],colors=contour,linewidths=0.5)
-    
+
     return (fig, ax)
 
 
@@ -202,11 +204,11 @@ def calculate_R2(actual,predicted):
     # convert to array
     actual = np.array(actual).reshape(1,-1)
     predicted = np.array(predicted).reshape(1,-1)
-    
+
     # calculate errors
     res_ss = np.sum((predicted-actual)**2)
     total_ss = np.sum((np.mean(actual)-actual)**2)
-    
+
     return 1-res_ss/total_ss
 
 
@@ -217,23 +219,22 @@ def plot_regression(actual, predicted, c='k'):
     plt.ylabel('Predicted Pentane Concentration (Mole Fraction)', fontsize = 12)
     ax = plt.gca()
     ax.tick_params(direction='in', top = True, bottom = True, left = True, right = True, labelsize = 11)
-    
+
     # plot line representing 1:1 correspondence
     plt.plot(np.linspace(0,1,100),np.linspace(0,1,100),'--',c=c,linewidth=1)
-    
+
     # scatter predictions
     plt.scatter(np.array(actual),np.array(predicted),c='k',s=15)
-    
+
 
 #------------------------------------------------------------#
 # Plot learning curve for SVC and SVR
 #------------------------------------------------------------#
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.model_selection import ShuffleSplit, learning_curve
 from sklearn.svm import SVC
-from sklearn.model_selection import learning_curve
-from sklearn.model_selection import ShuffleSplit
 
 
 def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
@@ -329,6 +330,7 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
 
 from sklearn.model_selection import train_test_split
 
+
 def plot_my_learning_curve(estimator, exp_derivs, exp_concentrations, ylim=(0,1), random_seeds = np.arange(0,100), M = None, test_size = 1/2.5):
     if M == None:
         M = np.arange(1,int(len(exp_derivs)*(1-test_size)))
@@ -349,7 +351,7 @@ def plot_my_learning_curve(estimator, exp_derivs, exp_concentrations, ylim=(0,1)
                 continue
             estimator.fit(derivs, lbls)
             predicted = estimator.predict(test_derivs)
-        
+
             train_score.append(estimator.score(derivs, lbls))
             test_score.append(estimator.score(test_derivs, test_lbl))
         train_mean.append(np.mean(train_score, axis=0))
@@ -370,15 +372,16 @@ def plot_my_learning_curve(estimator, exp_derivs, exp_concentrations, ylim=(0,1)
 
     print("Training accuracy: " + str(train_mean[-1]) + " (" + str(train_std[-1]) + ")")
     print("Validation accuracy: " + str(test_mean[-1]) + " (" + str(test_std[-1]) + ")")
-    
+
     return test_mean, test_std, M
-    
+
 
 #------------------------------------------------------------#
 # Plot confusion matrix
 #------------------------------------------------------------#
 
 from sklearn.metrics import confusion_matrix
+
 
 def plot_confusion_matrix(y_true, y_pred, classes=None, normalize=False, title=None, cmap=plt.cm.Blues):
     """
@@ -430,16 +433,17 @@ def plot_confusion_matrix(y_true, y_pred, classes=None, normalize=False, title=N
 
 import inspect
 
+
 def plot_deriv(exps, labels = None, norm = True, ax = None, color = None):
     if ax == None:
         fig, ax = plt.subplots()
-    
+
     # convert input to list
     if not type(exps) == list:
         exps = [exps]
     if not type(labels) == list:
         labels = [labels]*len(exps)
-       
+
     for exp,label in zip(exps,labels):
         # determine input type and handle apropriately
         if type(exp) == int: # get experiment, load data, calculate and plot
@@ -455,13 +459,13 @@ def plot_deriv(exps, labels = None, norm = True, ax = None, color = None):
             phase_deriv = data.getPhaseDerivative('spectral',1,smoothing=True,normalize=False)
         else: # expect phase derivative data, just plot
             phase_deriv = exp
-        
+
         # normalize data
         if norm:
             phase_deriv = phase_deriv/np.sqrt(np.sum(phase_deriv**2))
-    
+
         ax.plot(phase_deriv, label = label, color = color)
-        
+
     return ax
 
 
@@ -491,7 +495,7 @@ def plot_river(exp):
     vmin = np.amin(d_array)
     vmax = np.amax(d_array)
     plt.imshow(d_array, vmin=vmin, vmax=vmax, interpolation='none', extent=extent, cmap='jet')
-    
+
     # Define image labels
     plt.ylabel('Time (s)', fontsize=16)
     plt.xlabel('Wavelength (nm)', fontsize=16)
@@ -499,16 +503,16 @@ def plot_river(exp):
     ax.yaxis.label.set_color('black')
     ax.tick_params(axis='x',colors='black')
     ax.tick_params(axis='y',colors='black')
-    
+
     # Image aspect ratio
     xext, yext = plt.gca().axes.get_xlim(), plt.gca().axes.get_ylim()
     xrange = xext[1] - xext[0]
     yrange = yext[1] - yext[0]
     plt.gca().set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
-    
+
     plt.tight_layout()
-    
-    
+
+
 def plot_spectrum(exp,n):
     # Plot river plot
     fig, ax = plt.subplots()
@@ -521,9 +525,9 @@ def plot_spectrum(exp,n):
     d_array = exp.spectra[n,:]
     plt.xlim((np.min(exp.wavelengths), np.max(exp.wavelengths)))
     plt.ylim((0, 1.1*np.max(d_array)))
-    
+
     plt.plot(exp.wavelengths, d_array)
-    
+
     # Define image labels
     plt.ylabel('Intensity (a.u.)', fontsize=16)
     plt.xlabel('Wavelength (nm)', fontsize=16)
@@ -531,15 +535,15 @@ def plot_spectrum(exp,n):
     ax.yaxis.label.set_color('black')
     ax.tick_params(axis='x',colors='black')
     ax.tick_params(axis='y',colors='black')
-    
+
     # Image aspect ratio
     xext, yext = plt.gca().axes.get_xlim(), plt.gca().axes.get_ylim()
     xrange = xext[1] - xext[0]
     yrange = yext[1] - yext[0]
     plt.gca().set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
-    
+
     plt.tight_layout()
-  
+
 
 def plot_FT(exp,f):
     # Plot river plot
@@ -558,10 +562,10 @@ def plot_FT(exp,f):
     plt.xlim((np.min(exp.times), np.max(exp.times)))
     plt.margins(0, 0.05)
     #plt.ylim((np.min(FT_real)-0.1*abs(np.min(FT_real)), np.max(FT_real)+0.1*abs(np.max(FT_real))))
-    
+
     plt.plot(exp.times, FT_real, color='b')
     plt.plot(exp.times, FT_imag, color='orange')
-    
+
     # Define image labels
     plt.ylabel('Intensity (a.u.)', fontsize=16)
     plt.xlabel('Time (s)', fontsize=16)
@@ -569,26 +573,26 @@ def plot_FT(exp,f):
     ax.yaxis.label.set_color('black')
     ax.tick_params(axis='x',colors='black')
     ax.tick_params(axis='y',colors='black')
-    
+
     # Image aspect ratio
     xext, yext = plt.gca().axes.get_xlim(), plt.gca().axes.get_ylim()
     xrange = xext[1] - xext[0]
     yrange = yext[1] - yext[0]
     plt.gca().set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
-    
+
     plt.tight_layout()
 
 
 def plot_phase(exps, labels = None, norm = True, ax = None, color = None):
     if ax == None:
         fig, ax = plt.subplots()
-    
+
     # convert input to list
     if not type(exps) == list:
         exps = [exps]
     if not type(labels) == list:
         labels = [labels]*len(exps)
-    
+
     maximum = 0
     for exp,label in zip(exps,labels):
         # determine input type and handle apropriately
@@ -605,22 +609,22 @@ def plot_phase(exps, labels = None, norm = True, ax = None, color = None):
             phase = data.getPhase('spectral',1,normalize=False)
         else: # expect phase derivative data, just plot
             phase = exp
-        
+
         # normalize data
         if norm:
             phase = phase/np.sqrt(np.sum(phase**2))
-        
+
         maximum = np.max([maximum, np.max(phase)])
         plt.plot(phase, label = label, color = color)
-    
+
     if type(exps[0]) == int or inspect.isclass(exps[0]):
         exp = data
-    
+
     # Clean up plot
     ax.margins(y=0)
     plt.xlim((np.min(exp.times), np.max(exp.times)))
     plt.ylim((ax.get_ylim()[0], ax.get_ylim()[1] + 0.05*np.diff(ax.get_ylim())))
-    
+
     # Define image labels
     plt.ylabel('Phase (a.u.)', fontsize=16)
     plt.xlabel('Time (s)', fontsize=16)
@@ -628,24 +632,24 @@ def plot_phase(exps, labels = None, norm = True, ax = None, color = None):
     ax.yaxis.label.set_color('black')
     ax.tick_params(axis='x',colors='black')
     ax.tick_params(axis='y',colors='black')
-    
+
     # Image aspect ratio
     xext, yext = plt.gca().axes.get_xlim(), plt.gca().axes.get_ylim()
     xrange = xext[1] - xext[0]
     yrange = yext[1] - yext[0]
     plt.gca().set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
 
-        
+
 def plot_deriv(exps, labels = None, norm = True, ax = None, color = None):
     if ax == None:
         fig, ax = plt.subplots()
-    
+
     # convert input to list
     if not type(exps) == list:
         exps = [exps]
     if not type(labels) == list:
         labels = [labels]*len(exps)
-    
+
     maximum = 0
     for exp,label in zip(exps,labels):
         # determine input type and handle apropriately
@@ -662,17 +666,17 @@ def plot_deriv(exps, labels = None, norm = True, ax = None, color = None):
             phase_deriv = data.getPhaseDerivative('spectral',1,smoothing=True,normalize=False)
         else: # expect phase derivative data, just plot
             phase_deriv = exp
-        
+
         # normalize data
         if norm:
             phase_deriv = phase_deriv/np.sqrt(np.sum(phase_deriv**2))
-    
+
         maximum = np.max([maximum, np.max(phase_deriv)])
         plt.plot(phase_deriv, label = label, color = color)
-    
+
     if type(exps[0]) == int or inspect.isclass(exps[0]):
         exp = data
-            
+
         # Clean up plot
         plt.xlim((np.min(exp.times), np.max(exp.times)))
         plt.ylim((0, 1.1*maximum))
@@ -690,7 +694,7 @@ def plot_deriv(exps, labels = None, norm = True, ax = None, color = None):
         xrange = xext[1] - xext[0]
         yrange = yext[1] - yext[0]
         plt.gca().set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
-        
+
     return ax
 
 

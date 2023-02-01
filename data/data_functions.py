@@ -119,9 +119,9 @@ class DerivTransform(Transform):
 
         # Step 3: Calculate phase derivative and perform smoothing with default parameters
         phi_deriv = np.diff(phi)
-        phi_deriv = scipy.signal.savgol_filter(
-            phi_deriv, window_length=31, polyorder=2
-        )
+        # phi_deriv = scipy.signal.savgol_filter(
+        #     phi_deriv, window_length=31, polyorder=2
+        # )
 
         if np.size(phi_deriv) < 600:
             phi_deriv = np.append(phi_deriv, [0])
@@ -150,6 +150,17 @@ class ImageTransform(Transform):
         img_resized = img.resize(self.size)
 
         return np.array(img_resized)
+
+
+class RiverTransform(Transform):
+    @staticmethod
+    def transform(data) -> np.array:
+        data_im = (data.values[:, 1:] - np.min(data.values[:, 1:])).transpose()
+        data_im = data_im[:, 400:1200] * 255 / np.max(data_im[:, 400:1200])
+
+        img = Image.fromarray(data_im)
+
+        return np.array(img)
 
 
 class StaticShiftTransform(Transform):

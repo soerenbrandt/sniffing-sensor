@@ -4,17 +4,16 @@ Creadted Mar 8 2019 by Soeren Brandt
 This file contains all the DATASETS used in machine learning
 """
 
+import os
+import sqlite3
 from abc import ABC
 from collections import OrderedDict
-import os
-from typing import Union, List
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
-import sqlite3
 
-from .experiment_parameters import ExperimentFilter, DataFilter
-from .experiment_parameters import ANALYTES_DB, LIBRARY_DB
+from .experiment_parameters import ANALYTES_DB, LIBRARY_DB, DataFilter, ExperimentFilter
 
 COLOR_DICT = OrderedDict([
     ('Pentane', (69. / 255, 127. / 255, 181. / 255)),  # blue
@@ -48,6 +47,10 @@ class Dataset(OrderedDict):
         for filter_ in filters:
             for chem, experiment_ids in self.items():
                 self.__setitem__(chem, filter_(experiment_ids))
+        for key in list(self.keys()):
+            if self.__getitem__(key):
+                continue
+            self.pop(key)
 
 
 #------------------------------------------------------------#
