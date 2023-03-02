@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from colour import Color
-from sklearn.metrics import r2_score
+from sklearn.metrics import confusion_matrix, r2_score
 
 LABELSIZE = 8
 LEGENDSIZE = 8
@@ -85,8 +85,8 @@ def plot_array_data(
                 np.linspace(xlim[0], xlim[1], len(avg)),
                 avg,
                 label=chem,
-                linestyle=linestyle,
-                linewidth=linewidth,
+                linestyle=linestyle.get(chem, "-") if isinstance(linestyle,dict) else linestyle,
+                linewidth=linewidth.get(chem, None) if isinstance(linewidth,dict) else linewidth,
                 color=color_dict[chem],
             )
             ax.fill_between(
@@ -201,3 +201,79 @@ def plot_regression(
     # clean up plot
     ax.set_xlim([-0.05, 1.05])
     ax.set_ylim([-0.05, 1.05])
+
+
+def plot_river(data: np.ndarray, wavelengths: np.ndarray, ax=None):
+    # Plot river plot
+    if ax is None:
+        _, ax = plt.subplots()
+    extent = [wavelengths[0], wavelengths[-1], 0, 600]
+
+    vmin = np.amin(data)
+    vmax = np.amax(data)
+    im = ax.imshow(data, vmin=vmin, vmax=vmax, interpolation='none', extent=extent, cmap='jet')
+
+    # Define image labels
+    ax.set_ylabel('Time (s)', fontsize=16)
+    ax.set_xlabel('Wavelength (nm)', fontsize=16)
+    ax.xaxis.label.set_color('black')
+    ax.yaxis.label.set_color('black')
+    ax.tick_params(axis='x',colors='black')
+    ax.tick_params(axis='y',colors='black')
+
+    # Image aspect ratio
+    xext, yext = ax.axes.get_xlim(), ax.axes.get_ylim()
+    xrange = xext[1] - xext[0]
+    yrange = yext[1] - yext[0]
+    ax.set_aspect(1 * abs(xrange / yrange)) # This is the line that causes the warnings about unicode
+
+    # Flip y-ticklabels
+    times = range(0, int(np.ceil(yext[1]))+1, 100)
+    ax.set_yticks(times)
+    ax.set_yticklabels(times[::-1])
+
+    plt.tight_layout()
+    return im
+
+
+def plot_confusion_matrix(y_true, y_pred, classes=None, normalize=False, title=None, cmap=plt.cm.Blues, ax = None):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if ax == None:
+        fig, ax = plt.subplots()
+    if title == True:
+        if normalize:
+            title = 'Normalized confusion matrix'
+        else:
+            title = 'Confusion matrix, without normalization'
+
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true, y_pred,labels=classes)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    #ax.figure.colorbar(im, ax=ax)
+    # We want to show all ticks...
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]),
+           # ... and label them with the respective list entries
+           xticklabels=classes, yticklabels=classes,
+           title=title)
+    ax.tick_params(labelsize = 12)
+    ax.set_ylabel('True label', fontsize=13)
+    ax.set_xlabel('Predicted label', fontsize=13)
+
+    # Rotate the tick labels and set their alignment.
+    ax.set_xticklabels(classes, rotation=45, ha="right", rotation_mode="anchor")
+
+    # Loop over data dimensions and create text annotations.
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
