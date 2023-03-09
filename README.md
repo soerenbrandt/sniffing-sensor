@@ -1,5 +1,5 @@
-# sniffing-sensor
-Machine learning implementation for **Non-Equilibrium Sensing of Volatile Compounds Using Active and Passive Analyte Delivery**.
+# Machine learning implementation for **Non-Equilibrium Sensing of Volatile Compounds Using Active and Passive Analyte Delivery**
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7710595.svg)](10.5281/zenodo.7710595)
 
 > **Authors**: Soeren Brandt1,2,†, Ida Pavlichenko1,2,†, Anna V. Shneidman1, Haritosh Patel1, Austin Tripp2, Timothy S. B. Wong2, Sean Lazaro2, Ethan Thompson2, Aubrey Maltz2, Thomas Storwick2,  Holden Beggs2, Katalin Szendrei-Temesi6,7, Bettina V. Lotsch6,7,  C. Nadir Kaplan4,5, Claas W. Visser3, Michael P. Brenner1,  Venkatesh N. Murthy8, and Joanna Aizenberg1,2,9
 
@@ -14,6 +14,10 @@ Machine learning implementation for **Non-Equilibrium Sensing of Volatile Compou
 8. Department of Molecular and Cellular Biology, Harvard University, Cambridge, Massachusetts 02138, USA
 9. Department of Chemistry and Chemical Biology, Harvard University, Cambridge, Massachusetts 02138, USA
 
+
+## Licenses
+
+Code [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  | Data [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
 ## Setup
 
