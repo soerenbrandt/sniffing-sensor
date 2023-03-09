@@ -7,8 +7,8 @@ from typing import List, Tuple, Union
 
 import pandas as pd
 
-ANALYTES_DB = Path(__file__).parent.joinpath("Analytes.db")
-LIBRARY_DB = Path(__file__).parent.joinpath("Library.db")
+ANALYTES_DB = Path(__file__).parent.joinpath("databases", "Analytes.db")
+LIBRARY_DB = Path(__file__).parent.joinpath("databases", "Library.db")
 
 
 EXPERIMENTAL_MEASUREMENTS = [
@@ -35,6 +35,12 @@ class Chamber(Enum):
     def sql_query(self):
         return f"Chamber_ID IN ({', '.join(map(str, self.value))})"
 
+    @classmethod
+    def from_id(cls, value):
+        for e in cls:
+            if value in e.value:
+                return e
+
 
 class Sensor(Enum):
     SM30 = [1, 6, 10, 11, 16, 18, 19, 20, 21, 23]
@@ -46,6 +52,12 @@ class Sensor(Enum):
     @property
     def sql_query(self):
         return f"Sensor_ID IN ({', '.join(map(str, self.value))})"
+
+    @classmethod
+    def from_id(cls, value):
+        for e in cls:
+            if value in e.value:
+                return e
 
 
 class ExperimentParameter(ABC):
