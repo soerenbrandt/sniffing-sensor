@@ -1,5 +1,5 @@
 # Machine learning implementation for **Non-Equilibrium Sensing of Volatile Compounds Using Active and Passive Analyte Delivery**
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3819126.svg)](10.5281/zenodo.7710595)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7710595.svg)](10.5281/zenodo.7710595)
 
 > **Authors**: Soeren Brandt1,2,†, Ida Pavlichenko1,2,†, Anna V. Shneidman1, Haritosh Patel1, Austin Tripp2, Timothy S. B. Wong2, Sean Lazaro2, Ethan Thompson2, Aubrey Maltz2, Thomas Storwick2,  Holden Beggs2, Katalin Szendrei-Temesi6,7, Bettina V. Lotsch6,7,  C. Nadir Kaplan4,5, Claas W. Visser3, Michael P. Brenner1,  Venkatesh N. Murthy8, and Joanna Aizenberg1,2,9
 
