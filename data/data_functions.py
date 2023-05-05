@@ -21,11 +21,16 @@ SNIFFING_PATH = Path(__file__).parent.joinpath("sniffing_data")
 
 class DataLoader:
     def __init__(
-        self, dataset: dict, transforms: list = None, folder: str = DATA_PATH
+        self,
+        dataset: dict,
+        transforms: list = None,
+        truncate_data_after: int = 600,
+        folder: str = DATA_PATH,
     ):
         self.folder = Path(folder)
         self.data = dataset
         self.transforms = transforms or []
+        self.truncate_data_after = truncate_data_after
         self._metadata = {}
 
     def load(self):
@@ -50,7 +55,11 @@ class DataLoader:
                             f"{experiment:06d}.csv"
                         )
 
-                    data = pd.read_csv(file_path)
+                    data = (
+                        pd.read_csv(file_path)
+                        .drop(columns="Unnamed: 0", errors="ignore")
+                        .iloc[:, : self.truncate_data_after + 1]
+                    )
                     wavelengths = data.values[:, 0]
                 except FileNotFoundError as e:
                     logging.warning(str(e))
@@ -101,8 +110,8 @@ class PhaseTransform(Transform):
         data_spectra = (
             data.values[:, 1:] - np.min(data.values[:, 1:])
         ).transpose()
+        wavelengths = (data.values[:, :1]).transpose()[0]
 
-        # performing manually: phase_derivs = [da.getPhaseDerivative('spectral',1,smoothing=True,normalize=False) for da in datas]
         # Step 1: get phase derivative data at each time step
         ft_data = np.fft.fft(data_spectra)
         # Step 2: Calculates the phase
@@ -111,10 +120,23 @@ class PhaseTransform(Transform):
         phi = I / (R**2 + I**2) ** 0.5
 
         # smooth
-        phi[0] = phi[1]
         phi = scipy.signal.savgol_filter(phi, window_length=31, polyorder=3)
 
-        return phi
+        # scale
+        # In the case of static analysis where phi only ever increases, this is
+        #  equivalent to initial_peak=wavelengths[np.argmax(data_spectra[0, :])]
+        initial_peak = wavelengths[np.argmax(data_spectra, axis=1).min()]
+        # In the case of static analysis where phi only ever increases, this is
+        #  equivalent to final_peak=wavelengths[np.argmax(data_spectra[-1, :])]
+        final_peak = wavelengths[np.argmax(data_spectra, axis=1).max()]
+        scale = (
+            lambda x: (x - phi.min())
+            / (phi.max() - phi.min())
+            * (final_peak - initial_peak)
+            + initial_peak
+        )
+
+        return scale(phi)
 
 
 class DerivTransform(Transform):
@@ -124,10 +146,11 @@ class DerivTransform(Transform):
 
         # Step 3: Calculate phase derivative and perform smoothing with default parameters
         phi_deriv = np.diff(phi)
-        # phi_deriv = scipy.signal.savgol_filter(
-        #     phi_deriv, window_length=31, polyorder=2
-        # )
 
+        # smooth
+        phi_deriv = scipy.signal.savgol_filter(
+            phi_deriv, window_length=31, polyorder=2
+        )
         if np.size(phi_deriv) < 600:
             phi_deriv = np.append(phi_deriv, [0])
 
