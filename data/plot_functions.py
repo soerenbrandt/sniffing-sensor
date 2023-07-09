@@ -134,10 +134,10 @@ def plot_array_data(
                 )
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-    if label == True:
+    if label is True:
         if xlim[0] == 0:
             ax.set_xlabel("Time (s)", fontsize=LABELSIZE)
-            ax.set_ylabel("Phase derivative (a.u.)", fontsize=LABELSIZE)
+            ax.set_ylabel("Phase derivative (normalized)", fontsize=LABELSIZE)
         else:
             ax.set_xlabel("Wavelength (nm)", fontsize=LABELSIZE)
             ax.set_ylabel("$\Delta I$ (a.u.)", fontsize=LABELSIZE)
